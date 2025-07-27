@@ -1,130 +1,130 @@
-import { RecipeCard } from './RecipeCard.js';
-import { FilterManager } from './FilterManager.js';
+import { generateCardHTML } from './RecipeCard.js';
+import { 
+    initFilterManager, 
+    setFiltersUpdateCallback, 
+    populateAllFilters, 
+    setupFilterSearch, 
+    applyFilters 
+} from './FilterManager.js';
 
 /**
- * Classe principale pour gérer l'application de recettes
+ * Variables globales pour l'application de recettes
  */
-export class RecipeApp {
-    constructor(recipes) {
-        this.recipes = recipes;
-        this.filteredRecipes = recipes;
-        
-        // Éléments DOM
-        this.recipesContainer = document.querySelector('.recipes-cards');
-        this.filterNumber = document.querySelector('.filter-number');
-        this.errorMessage = document.querySelector('#error-message');
-        
-        // Gestionnaire de filtres
-        this.filterManager = new FilterManager(recipes);
-        this.filterManager.onFiltersChange = () => this.handleFiltersChange();
-        
-        this.init();
+let recipes = [];
+let filteredRecipes = [];
+let recipesContainer;
+let filterNumber;
+let errorMessage;
+
+/**
+ * Initialise l'application de recettes
+ */
+export function initRecipeApp(recipesData) {
+    recipes = recipesData;
+    filteredRecipes = recipesData;
+    
+    // Éléments DOM
+    recipesContainer = document.querySelector('.recipes-cards');
+    filterNumber = document.querySelector('.filter-number');
+    errorMessage = document.querySelector('#error-message');
+    
+    // Gestionnaire de filtres
+    initFilterManager(recipesData);
+    setFiltersUpdateCallback(handleFiltersChange);
+    
+    // Initialisation
+    displayRecipes(recipes);
+    updateRecipeCount(recipes.length);
+    populateAllFilters();
+    setupEventListeners();
+}
+
+/**
+ * Affiche les recettes dans le conteneur
+ */
+export function displayRecipes(recipesToDisplay) {
+    recipesContainer.innerHTML = '';
+    
+    if (recipesToDisplay.length === 0) {
+        showErrorMessage();
+        return;
     }
 
-    /**
-     * Initialise l'application
-     */
-    init() {
-        this.displayRecipes(this.recipes);
-        this.updateRecipeCount(this.recipes.length);
-        this.filterManager.populateAllFilters();
-        this.setupEventListeners();
-    }
+    hideErrorMessage();
+    
+    // Génération directe du HTML
+    const cardsHTML = recipesToDisplay.map(recipe => generateCardHTML(recipe)).join('');
+    recipesContainer.innerHTML = cardsHTML;
+}
 
-    /**
-     * Affiche les recettes dans le conteneur
-     */
-    displayRecipes(recipesToDisplay) {
-        this.recipesContainer.innerHTML = '';
-        
-        if (recipesToDisplay.length === 0) {
-            this.showErrorMessage();
-            return;
-        }
+/**
+ * Met à jour le compteur de recettes
+ */
+export function updateRecipeCount(count) {
+    filterNumber.textContent = `${count} recette${count > 1 ? 's' : ''}`;
+}
 
-        this.hideErrorMessage();
-        
-        // Utilisation de DocumentFragment pour de meilleures performances
-        const fragment = document.createDocumentFragment();
-        recipesToDisplay.forEach(recipe => {
-            const card = new RecipeCard(recipe);
-            const div = document.createElement('div');
-            div.innerHTML = card.generateCardHTML();
-            fragment.appendChild(div.firstElementChild);
-        });
-        
-        this.recipesContainer.appendChild(fragment);
-    }
+/**
+ * Affiche le message d'erreur
+ */
+export function showErrorMessage() {
+    errorMessage.style.display = 'block';
+    errorMessage.textContent = 'Aucune recette ne correspond à votre recherche… vous pouvez chercher « tarte aux pommes », « poisson », etc.';
+    updateRecipeCount(0);
+}
 
-    /**
-     * Met à jour le compteur de recettes
-     */
-    updateRecipeCount(count) {
-        this.filterNumber.textContent = `${count} recette${count > 1 ? 's' : ''}`;
-    }
+/**
+ * Cache le message d'erreur
+ */
+export function hideErrorMessage() {
+    errorMessage.style.display = 'none';
+}
 
-    /**
-     * Affiche le message d'erreur
-     */
-    showErrorMessage() {
-        this.errorMessage.style.display = 'block';
-        this.errorMessage.textContent = 'Aucune recette ne correspond à votre recherche… vous pouvez chercher « tarte aux pommes », « poisson », etc.';
-        this.updateRecipeCount(0);
+/**
+ * Recherche dans les recettes
+ */
+export function searchRecipes(searchTerm) {
+    if (searchTerm.length < 3) {
+        filteredRecipes = recipes;
+    } else {
+        const term = searchTerm.toLowerCase();
+        filteredRecipes = recipes.filter(recipe => 
+            recipe.name.toLowerCase().includes(term) ||
+            recipe.description.toLowerCase().includes(term) ||
+            recipe.ingredients.some(ingredient => 
+                ingredient.ingredient.toLowerCase().includes(term)
+            )
+        );
     }
+    handleFiltersChange();
+}
 
-    /**
-     * Cache le message d'erreur
-     */
-    hideErrorMessage() {
-        this.errorMessage.style.display = 'none';
-    }
+/**
+ * Gère les changements de filtres
+ */
+export function handleFiltersChange() {
+    const filtered = applyFilters(filteredRecipes);
+    displayRecipes(filtered);
+    updateRecipeCount(filtered.length);
+}
 
-    /**
-     * Recherche dans les recettes
-     */
-    searchRecipes(searchTerm) {
-        if (searchTerm.length < 3) {
-            this.filteredRecipes = this.recipes;
-        } else {
-            const term = searchTerm.toLowerCase();
-            this.filteredRecipes = this.recipes.filter(recipe => 
-                recipe.name.toLowerCase().includes(term) ||
-                recipe.description.toLowerCase().includes(term) ||
-                recipe.ingredients.some(ingredient => 
-                    ingredient.ingredient.toLowerCase().includes(term)
-                )
-            );
-        }
-        this.handleFiltersChange();
-    }
-
-    /**
-     * Gère les changements de filtres
-     */
-    handleFiltersChange() {
-        const filtered = this.filterManager.applyFilters(this.filteredRecipes);
-        this.displayRecipes(filtered);
-        this.updateRecipeCount(filtered.length);
-    }
-
-    /**
-     * Configure tous les événements
-     */
-    setupEventListeners() {
-        // Recherche principale
-        const searchInput = document.getElementById('search-input');
-        const searchForm = document.querySelector('.search-form');
-        
-        searchInput.addEventListener('input', (e) => {
-            this.searchRecipes(e.target.value);
-        });
-        
-        searchForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.searchRecipes(searchInput.value);
-        });
-        
-        // Configuration de la recherche dans les filtres
-        this.filterManager.setupFilterSearch();
-    }
+/**
+ * Configure tous les événements
+ */
+export function setupEventListeners() {
+    // Recherche principale
+    const searchInput = document.getElementById('search-input');
+    const searchForm = document.querySelector('.search-form');
+    
+    searchInput.addEventListener('input', (e) => {
+        searchRecipes(e.target.value);
+    });
+    
+    searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        searchRecipes(searchInput.value);
+    });
+    
+    // Configuration de la recherche dans les filtres
+    setupFilterSearch();
 }
