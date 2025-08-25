@@ -53,7 +53,10 @@ export function displayRecipes(recipesToDisplay) {
     hideErrorMessage();
     
     // Génération directe du HTML
-    const cardsHTML = recipesToDisplay.map(recipe => generateCardHTML(recipe)).join('');
+    let cardsHTML = '';
+    recipesToDisplay.forEach(recipe => {
+        cardsHTML += generateCardHTML(recipe);
+    });
     recipesContainer.innerHTML = cardsHTML;
 }
 
@@ -88,13 +91,34 @@ export function searchRecipes(searchTerm) {
         filteredRecipes = recipes;
     } else {
         const term = searchTerm.toLowerCase();
-        filteredRecipes = recipes.filter(recipe => 
-            recipe.name.toLowerCase().includes(term) ||
-            recipe.description.toLowerCase().includes(term) ||
-            recipe.ingredients.some(ingredient => 
-                ingredient.ingredient.toLowerCase().includes(term)
-            )
-        );
+        filteredRecipes = [];
+        
+        recipes.forEach(recipe => {
+            let found = false;
+            
+            // Recherche dans le nom
+            if (recipe.name.toLowerCase().includes(term)) {
+                found = true;
+            }
+            
+            // Recherche dans la description
+            if (!found && recipe.description.toLowerCase().includes(term)) {
+                found = true;
+            }
+            
+            // Recherche dans les ingrédients
+            if (!found) {
+                recipe.ingredients.forEach(ingredient => {
+                    if (ingredient.ingredient.toLowerCase().includes(term)) {
+                        found = true;
+                    }
+                });
+            }
+            
+            if (found) {
+                filteredRecipes.push(recipe);
+            }
+        });
     }
     handleFiltersChange();
 }

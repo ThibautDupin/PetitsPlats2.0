@@ -6,7 +6,9 @@
  * Formate la liste des ingrédients avec quantités et unités
  */
 export function formatIngredients(ingredients) {
-    return ingredients.map(ingredient => {
+    let result = '';
+    
+    ingredients.forEach(ingredient => {
         const ingredientText = ingredient.ingredient;
         let quantityText = '';
         
@@ -17,13 +19,15 @@ export function formatIngredients(ingredients) {
             }
         }
 
-        return `
+        result += `
             <li class="card-description__item">
                 <span class="card-description__item-ingredients">${ingredientText}</span>
                 ${quantityText ? `<span class="card-description__item-quantity">${quantityText}</span>` : ''}
             </li>
         `;
-    }).join('');
+    });
+    
+    return result;
 }
 
 /**

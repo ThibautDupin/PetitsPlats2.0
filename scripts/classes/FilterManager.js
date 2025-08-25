@@ -44,7 +44,7 @@ export function setFiltersUpdateCallback(callback) {
 }
 
 /**
- * Extrait les données uniques pour les filtres
+ * Extrait les données uniques pour les filtresfil
  */
 export function getUniqueData() {
     const data = {
@@ -164,38 +164,89 @@ export function removeFilter(filterType, value) {
  * Applique tous les filtres actifs
  */
 export function applyFilters(recipesToFilter) {
-    let filtered = [...recipesToFilter];
+    let filtered = [];
     
-    // Filtrer par ingrédients (ET logique)
-    if (Object.keys(filters.ingredients.selected).length > 0) {
-        filtered = filtered.filter(recipe => 
-            Object.keys(filters.ingredients.selected).every(selectedIngredient =>
-                recipe.ingredients.some(ingredient => 
-                    ingredient.ingredient.toLowerCase().includes(selectedIngredient)
-                )
-            )
-        );
-    }
-    
-    // Filtrer par appareils (OU logique)
-    if (Object.keys(filters.appliances.selected).length > 0) {
-        filtered = filtered.filter(recipe =>
-            Object.keys(filters.appliances.selected).some(selectedAppliance => 
-                recipe.appliance && recipe.appliance.toLowerCase().includes(selectedAppliance)
-            )
-        );
-    }
-    
-    // Filtrer par ustensiles (ET logique)
-    if (Object.keys(filters.utensils.selected).length > 0) {
-        filtered = filtered.filter(recipe =>
-            Object.keys(filters.utensils.selected).every(selectedUtensil =>
-                recipe.ustensils && recipe.ustensils.some(utensil => 
-                    utensil.toLowerCase().includes(selectedUtensil)
-                )
-            )
-        );
-    }
+    recipesToFilter.forEach(recipe => {
+        let shouldIncludeRecipe = true;
+        
+        // Filtrer par ingrédients (ET logique)
+        if (Object.keys(filters.ingredients.selected).length > 0) {
+            const selectedIngredients = Object.keys(filters.ingredients.selected);
+            let allIngredientsFound = true;
+            
+            for (let j = 0; j < selectedIngredients.length; j++) {
+                const selectedIngredient = selectedIngredients[j];
+                let ingredientFound = false;
+                
+                for (let k = 0; k < recipe.ingredients.length; k++) {
+                    if (recipe.ingredients[k].ingredient.toLowerCase().includes(selectedIngredient)) {
+                        ingredientFound = true;
+                        break;
+                    }
+                }
+                
+                if (!ingredientFound) {
+                    allIngredientsFound = false;
+                    break;
+                }
+            }
+            
+            if (!allIngredientsFound) {
+                shouldIncludeRecipe = false;
+            }
+        }
+        
+        // Filtrer par appareils (OU logique)
+        if (shouldIncludeRecipe && Object.keys(filters.appliances.selected).length > 0) {
+            const selectedAppliances = Object.keys(filters.appliances.selected);
+            let applianceFound = false;
+            
+            for (let j = 0; j < selectedAppliances.length; j++) {
+                const selectedAppliance = selectedAppliances[j];
+                if (recipe.appliance && recipe.appliance.toLowerCase().includes(selectedAppliance)) {
+                    applianceFound = true;
+                    break;
+                }
+            }
+            
+            if (!applianceFound) {
+                shouldIncludeRecipe = false;
+            }
+        }
+        
+        // Filtrer par ustensiles (ET logique)
+        if (shouldIncludeRecipe && Object.keys(filters.utensils.selected).length > 0) {
+            const selectedUtensils = Object.keys(filters.utensils.selected);
+            let allUtensilsFound = true;
+            
+            for (let j = 0; j < selectedUtensils.length; j++) {
+                const selectedUtensil = selectedUtensils[j];
+                let utensilFound = false;
+                
+                if (recipe.ustensils) {
+                    for (let k = 0; k < recipe.ustensils.length; k++) {
+                        if (recipe.ustensils[k].toLowerCase().includes(selectedUtensil)) {
+                            utensilFound = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (!utensilFound) {
+                    allUtensilsFound = false;
+                    break;
+                }
+            }
+            
+            if (!allUtensilsFound) {
+                shouldIncludeRecipe = false;
+            }
+        }
+        
+        if (shouldIncludeRecipe) {
+            filtered.push(recipe);
+        }
+    });
     
     return filtered;
 }
