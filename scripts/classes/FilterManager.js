@@ -2,190 +2,217 @@
  * Gestionnaire de filtres fonctionnel pour l'application
  */
 
+import {
+    displayFilterError,
+    validateDOMElement,
+    handleDataValidationError
+} from './ErrorHandler.js';
+
 // Variables globales pour les filtres
-let recipes = [];
-let filters = {};
-let onFiltersUpdateCallback = null;
+let recipesList = [];
+let filterCategories = {};
+let onFiltersChangeCallback = null;
 
 /**
- * Initialise le gestionnaire de filtres
+ * Initialise le gestionnaire de filtres avec les données des recettes
  */
-export function initFilterManager(recipesData) {
-    recipes = recipesData;
-    
-    // Configuration des filtres
-    filters = {
-        ingredients: {
-            selected: {},
-            list: document.getElementById('ingredients-list'),
-            container: document.getElementById('selected-ingredients'),
-            search: document.getElementById('ingredients-search')
-        },
-        appliances: {
-            selected: {},
-            list: document.getElementById('appliances-list'),
-            container: document.getElementById('selected-appliances'),
-            search: document.getElementById('appliances-search')
-        },
-        utensils: {
-            selected: {},
-            list: document.getElementById('utensils-list'),
-            container: document.getElementById('selected-utensils'),
-            search: document.getElementById('utensils-search')
-        }
-    };
+export function initializeFilterManager(recipesData) {
+    try {
+        handleDataValidationError(recipesData, 'recettes', 'initializeFilterManager');
+        recipesList = recipesData;
+        
+        // Configuration des catégories de filtres avec leurs éléments DOM
+        filterCategories = {
+            ingredients: {
+                selectedItems: {},
+                dropdownList: document.getElementById('ingredients-list'),
+                selectedContainer: document.getElementById('selected-ingredients'),
+                searchInput: document.getElementById('ingredients-search')
+            },
+            appliances: {
+                selectedItems: {},
+                dropdownList: document.getElementById('appliances-list'),
+                selectedContainer: document.getElementById('selected-appliances'),
+                searchInput: document.getElementById('appliances-search')
+            },
+            utensils: {
+                selectedItems: {},
+                dropdownList: document.getElementById('utensils-list'),
+                selectedContainer: document.getElementById('selected-utensils'),
+                searchInput: document.getElementById('utensils-search')
+            }
+        };
+        
+        // Vérification que tous les éléments DOM requis sont présents
+        Object.keys(filterCategories).forEach(categoryName => {
+            const category = filterCategories[categoryName];
+            validateDOMElement(category.dropdownList, `${categoryName}-list`, 'initializeFilterManager');
+            validateDOMElement(category.selectedContainer, `selected-${categoryName}`, 'initializeFilterManager');
+            validateDOMElement(category.searchInput, `${categoryName}-search`, 'initializeFilterManager');
+        });
+    } catch (error) {
+        displayFilterError(error, 'initializeFilterManager');
+    }
 }
 
 /**
- * Définit le callback à appeler lors des mises à jour de filtres
+ * Définit la fonction callback à exécuter lors des changements de filtres
  */
-export function setFiltersUpdateCallback(callback) {
-    onFiltersUpdateCallback = callback;
+export function setOnFiltersChangeCallback(callbackFunction) {
+    onFiltersChangeCallback = callbackFunction;
 }
 
 /**
- * Extrait les données uniques pour les filtresfil
+ * Extrait tous les éléments uniques pour chaque catégorie de filtres
  */
-export function getUniqueData() {
-    const data = {
+export function extractUniqueFilterData() {
+    const uniqueData = {
         ingredients: {},
         appliances: {},
         utensils: {}
     };
 
-    recipes.forEach(recipe => {
-        // Ingrédients
-        recipe.ingredients.forEach(ingredient => {
-            data.ingredients[ingredient.ingredient.toLowerCase()] = true;
+    recipesList.forEach(recipe => {
+        // Extraction des ingrédients uniques
+        recipe.ingredients.forEach(ingredientItem => {
+            uniqueData.ingredients[ingredientItem.ingredient.toLowerCase()] = true;
         });
         
-        // Appareils
+        // Extraction des appareils uniques
         if (recipe.appliance) {
-            data.appliances[recipe.appliance.toLowerCase()] = true;
+            uniqueData.appliances[recipe.appliance.toLowerCase()] = true;
         }
         
-        // Ustensiles
+        // Extraction des ustensiles uniques
         if (recipe.ustensils) {
-            recipe.ustensils.forEach(utensil => {
-                data.utensils[utensil.toLowerCase()] = true;
+            recipe.ustensils.forEach(utensilItem => {
+                uniqueData.utensils[utensilItem.toLowerCase()] = true;
             });
         }
     });
 
     return {
-        ingredients: Object.keys(data.ingredients).sort(),
-        appliances: Object.keys(data.appliances).sort(),
-        utensils: Object.keys(data.utensils).sort()
+        ingredients: Object.keys(uniqueData.ingredients).sort(),
+        appliances: Object.keys(uniqueData.appliances).sort(),
+        utensils: Object.keys(uniqueData.utensils).sort()
     };
 }
 
 /**
- * Remplit tous les filtres
+ * Remplit toutes les listes déroulantes de filtres
  */
-export function populateAllFilters() {
-    const data = getUniqueData();
+export function populateAllFilterDropdowns() {
+    const uniqueFilterData = extractUniqueFilterData();
     
-    Object.keys(filters).forEach(filterType => {
-        populateDropdown(data[filterType], filterType);
+    Object.keys(filterCategories).forEach(categoryName => {
+        fillDropdownWithItems(uniqueFilterData[categoryName], categoryName);
     });
 }
 
 /**
- * Remplit une liste déroulante
+ * Remplit une liste déroulante avec les éléments fournis
  */
-export function populateDropdown(items, filterType) {
-    const container = filters[filterType].list;
-    container.innerHTML = '';
+export function fillDropdownWithItems(itemsList, categoryName) {
+    const dropdownContainer = filterCategories[categoryName].dropdownList;
+    dropdownContainer.innerHTML = '';
     
-    items.forEach(item => {
-        const li = document.createElement('li');
-        const a = document.createElement('a');
-        a.className = 'dropdown-item';
-        a.href = '#';
-        a.textContent = item;
+    itemsList.forEach(itemValue => {
+        const listItem = document.createElement('li');
+        const linkElement = document.createElement('a');
+        linkElement.className = 'dropdown-item';
+        linkElement.href = '#';
+        linkElement.textContent = itemValue;
         
-        a.addEventListener('click', (e) => {
-            e.preventDefault();
-            addFilter(filterType, item);
+        linkElement.addEventListener('click', (event) => {
+            event.preventDefault();
+            addFilterItem(categoryName, itemValue);
         });
         
-        li.appendChild(a);
-        container.appendChild(li);
+        listItem.appendChild(linkElement);
+        dropdownContainer.appendChild(listItem);
     });
 }
 
 /**
- * Ajoute un filtre
+ * Ajoute un élément à la catégorie de filtre sélectionnée
  */
-export function addFilter(filterType, value) {
-    const filter = filters[filterType];
-    
-    if (!filter.selected[value]) {
-        filter.selected[value] = true;
-        createFilterTag(value, filterType, filter.container);
-        handleFiltersUpdate();
+export function addFilterItem(categoryName, itemValue) {
+    try {
+        const filterCategory = filterCategories[categoryName];
+        
+        if (!filterCategory) {
+            throw new Error(`Catégorie de filtre invalide: ${categoryName}`);
+        }
+        
+        if (!filterCategory.selectedItems[itemValue]) {
+            filterCategory.selectedItems[itemValue] = true;
+            createFilterTag(itemValue, categoryName, filterCategory.selectedContainer);
+            notifyFiltersChange();
+        }
+    } catch (error) {
+        displayFilterError(error, 'addFilterItem');
     }
 }
 
 /**
- * Crée un tag de filtre
+ * Crée un tag visuel pour un filtre sélectionné
  */
-export function createFilterTag(value, filterType, container) {
-    const tag = document.createElement('div');
-    tag.className = 'selected-option';
-    tag.innerHTML = `${value}<i class="bi bi-x"></i>`;
+export function createFilterTag(itemValue, categoryName, containerElement) {
+    const tagElement = document.createElement('div');
+    tagElement.className = 'selected-option';
+    tagElement.innerHTML = `${itemValue}<i class="bi bi-x"></i>`;
     
-    tag.querySelector('i').addEventListener('click', () => {
-        removeFilter(filterType, value);
+    tagElement.querySelector('i').addEventListener('click', () => {
+        removeFilterItem(categoryName, itemValue);
     });
     
-    container.appendChild(tag);
+    containerElement.appendChild(tagElement);
 }
 
 /**
- * Supprime un filtre
+ * Supprime un élément de la catégorie de filtre sélectionnée
  */
-export function removeFilter(filterType, value) {
-    const filter = filters[filterType];
-    delete filter.selected[value];
+export function removeFilterItem(categoryName, itemValue) {
+    const filterCategory = filterCategories[categoryName];
+    delete filterCategory.selectedItems[itemValue];
     
-    // Supprimer le tag du DOM
-    const tags = filter.container.querySelectorAll('.selected-option');
-    tags.forEach(tag => {
-        if (tag.textContent.includes(value)) {
-            tag.remove();
+    // Supprimer le tag visuel du DOM
+    const existingTags = filterCategory.selectedContainer.querySelectorAll('.selected-option');
+    existingTags.forEach(tagElement => {
+        if (tagElement.textContent.includes(itemValue)) {
+            tagElement.remove();
         }
     });
     
-    handleFiltersUpdate();
+    notifyFiltersChange();
 }
 
 /**
- * Applique tous les filtres actifs
+ * Applique tous les filtres actifs sur la liste de recettes fournie
  */
-export function applyFilters(recipesToFilter) {
-    let filtered = [];
+export function filterRecipesBySelectedFilters(recipesToFilter) {
+    let filteredRecipes = [];
     
     recipesToFilter.forEach(recipe => {
         let shouldIncludeRecipe = true;
         
-        // Filtrer par ingrédients (ET logique)
-        if (Object.keys(filters.ingredients.selected).length > 0) {
-            const selectedIngredients = Object.keys(filters.ingredients.selected);
+        // Filtrage par ingrédients (logique ET - tous les ingrédients sélectionnés doivent être présents)
+        if (Object.keys(filterCategories.ingredients.selectedItems).length > 0) {
+            const selectedIngredientsList = Object.keys(filterCategories.ingredients.selectedItems);
             let allIngredientsFound = true;
             
-            for (let j = 0; j < selectedIngredients.length; j++) {
-                const selectedIngredient = selectedIngredients[j];
-                let ingredientFound = false;
+            for (let i = 0; i < selectedIngredientsList.length; i++) {
+                const requiredIngredient = selectedIngredientsList[i];
+                let ingredientFoundInRecipe = false;
                 
-                for (let k = 0; k < recipe.ingredients.length; k++) {
-                    if (recipe.ingredients[k].ingredient.toLowerCase().includes(selectedIngredient)) {
-                        ingredientFound = true;
+                for (let j = 0; j < recipe.ingredients.length; j++) {
+                    if (recipe.ingredients[j].ingredient.toLowerCase().includes(requiredIngredient)) {
+                        ingredientFoundInRecipe = true;
                         break;
                     }
                 }
                 
-                if (!ingredientFound) {
+                if (!ingredientFoundInRecipe) {
                     allIngredientsFound = false;
                     break;
                 }
@@ -196,43 +223,43 @@ export function applyFilters(recipesToFilter) {
             }
         }
         
-        // Filtrer par appareils (OU logique)
-        if (shouldIncludeRecipe && Object.keys(filters.appliances.selected).length > 0) {
-            const selectedAppliances = Object.keys(filters.appliances.selected);
-            let applianceFound = false;
+        // Filtrage par appareils (logique OU - au moins un appareil sélectionné doit correspondre)
+        if (shouldIncludeRecipe && Object.keys(filterCategories.appliances.selectedItems).length > 0) {
+            const selectedAppliancesList = Object.keys(filterCategories.appliances.selectedItems);
+            let applianceFoundInRecipe = false;
             
-            for (let j = 0; j < selectedAppliances.length; j++) {
-                const selectedAppliance = selectedAppliances[j];
-                if (recipe.appliance && recipe.appliance.toLowerCase().includes(selectedAppliance)) {
-                    applianceFound = true;
+            for (let i = 0; i < selectedAppliancesList.length; i++) {
+                const requiredAppliance = selectedAppliancesList[i];
+                if (recipe.appliance && recipe.appliance.toLowerCase().includes(requiredAppliance)) {
+                    applianceFoundInRecipe = true;
                     break;
                 }
             }
             
-            if (!applianceFound) {
+            if (!applianceFoundInRecipe) {
                 shouldIncludeRecipe = false;
             }
         }
         
-        // Filtrer par ustensiles (ET logique)
-        if (shouldIncludeRecipe && Object.keys(filters.utensils.selected).length > 0) {
-            const selectedUtensils = Object.keys(filters.utensils.selected);
+        // Filtrage par ustensiles (logique ET - tous les ustensiles sélectionnés doivent être présents)
+        if (shouldIncludeRecipe && Object.keys(filterCategories.utensils.selectedItems).length > 0) {
+            const selectedUtensilsList = Object.keys(filterCategories.utensils.selectedItems);
             let allUtensilsFound = true;
             
-            for (let j = 0; j < selectedUtensils.length; j++) {
-                const selectedUtensil = selectedUtensils[j];
-                let utensilFound = false;
+            for (let i = 0; i < selectedUtensilsList.length; i++) {
+                const requiredUtensil = selectedUtensilsList[i];
+                let utensilFoundInRecipe = false;
                 
                 if (recipe.ustensils) {
-                    for (let k = 0; k < recipe.ustensils.length; k++) {
-                        if (recipe.ustensils[k].toLowerCase().includes(selectedUtensil)) {
-                            utensilFound = true;
+                    for (let j = 0; j < recipe.ustensils.length; j++) {
+                        if (recipe.ustensils[j].toLowerCase().includes(requiredUtensil)) {
+                            utensilFoundInRecipe = true;
                             break;
                         }
                     }
                 }
                 
-                if (!utensilFound) {
+                if (!utensilFoundInRecipe) {
                     allUtensilsFound = false;
                     break;
                 }
@@ -244,42 +271,46 @@ export function applyFilters(recipesToFilter) {
         }
         
         if (shouldIncludeRecipe) {
-            filtered.push(recipe);
+            filteredRecipes.push(recipe);
         }
     });
     
-    return filtered;
+    return filteredRecipes;
 }
 
 /**
- * Configure la recherche dans les filtres
+ * Configure la fonctionnalité de recherche dans tous les filtres
  */
-export function setupFilterSearch() {
-    Object.keys(filters).forEach(filterType => {
-        filters[filterType].search.addEventListener('input', (e) => {
-            filterDropdownItems(e.target.value, filters[filterType].list);
+export function setupFilterSearchFunctionality() {
+    Object.keys(filterCategories).forEach(categoryName => {
+        filterCategories[categoryName].searchInput.addEventListener('input', (event) => {
+            searchInDropdownItems(event.target.value, filterCategories[categoryName].dropdownList);
         });
     });
 }
 
 /**
- * Filtre les éléments dans une liste déroulante
+ * Filtre les éléments visibles dans une liste déroulante selon le terme de recherche
  */
-export function filterDropdownItems(searchTerm, container) {
-    const items = container.querySelectorAll('li');
-    const term = searchTerm.toLowerCase();
+export function searchInDropdownItems(searchTerm, dropdownContainer) {
+    const allItems = dropdownContainer.querySelectorAll('li');
+    const normalizedSearchTerm = searchTerm.toLowerCase();
     
-    items.forEach(item => {
-        const text = item.textContent.toLowerCase();
-        item.style.display = text.includes(term) ? 'block' : 'none';
+    allItems.forEach(listItem => {
+        const itemText = listItem.textContent.toLowerCase();
+        listItem.style.display = itemText.includes(normalizedSearchTerm) ? 'block' : 'none';
     });
 }
 
 /**
- * Gère les mises à jour de filtres
+ * Notifie les autres composants qu'un changement de filtres a eu lieu
  */
-function handleFiltersUpdate() {
-    if (onFiltersUpdateCallback) {
-        onFiltersUpdateCallback();
+function notifyFiltersChange() {
+    try {
+        if (onFiltersChangeCallback) {
+            onFiltersChangeCallback();
+        }
+    } catch (error) {
+        displayFilterError(error, 'notifyFiltersChange');
     }
 }

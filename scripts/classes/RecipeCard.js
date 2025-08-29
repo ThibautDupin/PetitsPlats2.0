@@ -3,53 +3,53 @@
  */
 
 /**
- * Formate la liste des ingrédients avec quantités et unités
+ * Formate la liste des ingrédients avec leurs quantités et unités
  */
-export function formatIngredients(ingredients) {
-    let result = '';
+export function formatIngredientsListHTML(ingredientsList) {
+    let formattedHTML = '';
     
-    ingredients.forEach(ingredient => {
-        const ingredientText = ingredient.ingredient;
-        let quantityText = '';
+    ingredientsList.forEach(ingredientItem => {
+        const ingredientName = ingredientItem.ingredient;
+        let quantityAndUnit = '';
         
-        if (ingredient.quantity) {
-            quantityText = ingredient.quantity;
-            if (ingredient.unit) {
-                quantityText += ` ${ingredient.unit}`;
+        if (ingredientItem.quantity) {
+            quantityAndUnit = ingredientItem.quantity;
+            if (ingredientItem.unit) {
+                quantityAndUnit += ` ${ingredientItem.unit}`;
             }
         }
 
-        result += `
+        formattedHTML += `
             <li class="card-description__item">
-                <span class="card-description__item-ingredients">${ingredientText}</span>
-                ${quantityText ? `<span class="card-description__item-quantity">${quantityText}</span>` : ''}
+                <span class="card-description__item-ingredients">${ingredientName}</span>
+                ${quantityAndUnit ? `<span class="card-description__item-quantity">${quantityAndUnit}</span>` : ''}
             </li>
         `;
     });
     
-    return result;
+    return formattedHTML;
 }
 
 /**
- * Génère le HTML d'une carte de recette
+ * Génère le code HTML complet d'une carte de recette
  */
-export function generateCardHTML(recipe) {
+export function generateCardHTML(recipeData) {
     return `
         <div class="col-lg-4 col-md-6 col-sm-12 recipes-card">
             <div class="card recipe-card">
-                <div class="recipe-card__time">${recipe.time}min</div>
-                <img src="assets/images/${recipe.image}" 
+                <div class="recipe-card__time">${recipeData.time}min</div>
+                <img src="assets/images/${recipeData.image}" 
                      class="card-img-top" 
-                     alt="${recipe.name}"
+                     alt="${recipeData.name}"
                      loading="lazy">
                 <div class="card-body">
-                    <h3 class="card-title">${recipe.name}</h3>
+                    <h3 class="card-title">${recipeData.name}</h3>
                     <div class="card-description">
                         <h4 class="card-description__name">Recette</h4>
-                        <p class="card-description__text">${recipe.description}</p>
+                        <p class="card-description__text">${recipeData.description}</p>
                         <h4 class="card-description__name">Ingrédients</h4>
                         <ul class="card-description__list">
-                            ${formatIngredients(recipe.ingredients)}
+                            ${formatIngredientsListHTML(recipeData.ingredients)}
                         </ul>
                     </div>
                 </div>

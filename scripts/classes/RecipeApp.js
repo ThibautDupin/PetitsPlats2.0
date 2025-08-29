@@ -1,154 +1,177 @@
 import { generateCardHTML } from './RecipeCard.js';
 import { 
-    initFilterManager, 
-    setFiltersUpdateCallback, 
-    populateAllFilters, 
-    setupFilterSearch, 
-    applyFilters 
+    initializeFilterManager, 
+    setOnFiltersChangeCallback, 
+    populateAllFilterDropdowns, 
+    setupFilterSearchFunctionality, 
+    filterRecipesBySelectedFilters 
 } from './FilterManager.js';
+import {
+    initializeErrorHandler,
+    showNoRecipesFoundMessage,
+    hideErrorMessage,
+    displayApplicationError,
+    validateDOMElement,
+    handleDataValidationError
+} from './ErrorHandler.js';
 
 /**
  * Variables globales pour l'application de recettes
  */
-let recipes = [];
-let filteredRecipes = [];
-let recipesContainer;
-let filterNumber;
-let errorMessage;
+let allRecipesList = [];
+let currentFilteredRecipes = [];
+let recipesDisplayContainer;
+let recipeCountDisplay;
 
 /**
- * Initialise l'application de recettes
+ * Initialise l'application de gestion des recettes
  */
-export function initRecipeApp(recipesData) {
-    recipes = recipesData;
-    filteredRecipes = recipesData;
-    
-    // Éléments DOM
-    recipesContainer = document.querySelector('.recipes-cards');
-    filterNumber = document.querySelector('.filter-number');
-    errorMessage = document.querySelector('#error-message');
-    
-    // Gestionnaire de filtres
-    initFilterManager(recipesData);
-    setFiltersUpdateCallback(handleFiltersChange);
-    
-    // Initialisation
-    displayRecipes(recipes);
-    updateRecipeCount(recipes.length);
-    populateAllFilters();
-    setupEventListeners();
-}
-
-/**
- * Affiche les recettes dans le conteneur
- */
-export function displayRecipes(recipesToDisplay) {
-    recipesContainer.innerHTML = '';
-    
-    if (recipesToDisplay.length === 0) {
-        showErrorMessage();
-        return;
-    }
-
-    hideErrorMessage();
-    
-    // Génération directe du HTML
-    let cardsHTML = '';
-    recipesToDisplay.forEach(recipe => {
-        cardsHTML += generateCardHTML(recipe);
-    });
-    recipesContainer.innerHTML = cardsHTML;
-}
-
-/**
- * Met à jour le compteur de recettes
- */
-export function updateRecipeCount(count) {
-    filterNumber.textContent = `${count} recette${count > 1 ? 's' : ''}`;
-}
-
-/**
- * Affiche le message d'erreur
- */
-export function showErrorMessage() {
-    errorMessage.style.display = 'block';
-    errorMessage.textContent = 'Aucune recette ne correspond à votre recherche… vous pouvez chercher « tarte aux pommes », « poisson », etc.';
-    updateRecipeCount(0);
-}
-
-/**
- * Cache le message d'erreur
- */
-export function hideErrorMessage() {
-    errorMessage.style.display = 'none';
-}
-
-/**
- * Recherche dans les recettes
- */
-export function searchRecipes(searchTerm) {
-    if (searchTerm.length < 3) {
-        filteredRecipes = recipes;
-    } else {
-        const term = searchTerm.toLowerCase();
-        filteredRecipes = [];
+export function initializeRecipeApplication(recipesData) {
+    try {
+        // Validation des données d'entrée
+        handleDataValidationError(recipesData, 'recettes', 'initializeRecipeApplication');
         
-        recipes.forEach(recipe => {
-            let found = false;
+        allRecipesList = recipesData;
+        currentFilteredRecipes = recipesData;
+        
+        // Récupération des éléments DOM nécessaires
+        recipesDisplayContainer = document.querySelector('.recipes-cards');
+        recipeCountDisplay = document.querySelector('.filter-number');
+        const errorDisplayElement = document.querySelector('#error-message');
+        
+        // Vérification que tous les éléments DOM requis sont présents
+        validateDOMElement(recipesDisplayContainer, 'recipes-cards', 'initializeRecipeApplication');
+        validateDOMElement(recipeCountDisplay, 'filter-number', 'initializeRecipeApplication');
+        validateDOMElement(errorDisplayElement, 'error-message', 'initializeRecipeApplication');
+        
+        // Initialisation du gestionnaire d'erreurs
+        initializeErrorHandler(errorDisplayElement, recipeCountDisplay);
+        
+        // Initialisation du gestionnaire de filtres
+        initializeFilterManager(recipesData);
+        setOnFiltersChangeCallback(handleFiltersChangeEvent);
+        
+        // Affichage initial des données
+        displayRecipesInContainer(allRecipesList);
+        updateDisplayedRecipeCount(allRecipesList.length);
+        populateAllFilterDropdowns();
+        setupAllEventListeners();
+    } catch (error) {
+        displayApplicationError(error, 'initializeRecipeApplication');
+    }
+}
+
+/**
+ * Affiche une liste de recettes dans le conteneur principal
+ */
+export function displayRecipesInContainer(recipesToDisplay) {
+    try {
+        validateDOMElement(recipesDisplayContainer, 'recipesDisplayContainer', 'displayRecipesInContainer');
+        
+        recipesDisplayContainer.innerHTML = '';
+        
+        if (recipesToDisplay.length === 0) {
+            showNoRecipesFoundMessage();
+            return;
+        }
+
+        hideErrorMessage();
+        
+        // Génération du HTML pour toutes les cartes de recettes
+        let allCardsHTML = '';
+        recipesToDisplay.forEach(recipeData => {
+            allCardsHTML += generateCardHTML(recipeData);
+        });
+        recipesDisplayContainer.innerHTML = allCardsHTML;
+    } catch (error) {
+        displayApplicationError(error, 'displayRecipesInContainer');
+    }
+}
+
+/**
+ * Met à jour l'affichage du nombre de recettes trouvées
+ */
+export function updateDisplayedRecipeCount(recipeCount) {
+    if (recipeCountDisplay) {
+        recipeCountDisplay.textContent = `${recipeCount} recette${recipeCount > 1 ? 's' : ''}`;
+    }
+}
+
+/**
+ * Effectue une recherche textuelle dans les recettes
+ */
+export function searchInRecipes(searchTerm) {
+    if (searchTerm.length < 3) {
+        currentFilteredRecipes = allRecipesList;
+    } else {
+        const normalizedSearchTerm = searchTerm.toLowerCase();
+        currentFilteredRecipes = [];
+        
+        allRecipesList.forEach(recipeData => {
+            let recipeMatchesSearch = false;
             
-            // Recherche dans le nom
-            if (recipe.name.toLowerCase().includes(term)) {
-                found = true;
+            // Recherche dans le nom de la recette
+            if (recipeData.name.toLowerCase().includes(normalizedSearchTerm)) {
+                recipeMatchesSearch = true;
             }
             
-            // Recherche dans la description
-            if (!found && recipe.description.toLowerCase().includes(term)) {
-                found = true;
+            // Recherche dans la description de la recette
+            if (!recipeMatchesSearch && recipeData.description.toLowerCase().includes(normalizedSearchTerm)) {
+                recipeMatchesSearch = true;
             }
             
             // Recherche dans les ingrédients
-            if (!found) {
-                recipe.ingredients.forEach(ingredient => {
-                    if (ingredient.ingredient.toLowerCase().includes(term)) {
-                        found = true;
+            if (!recipeMatchesSearch) {
+                recipeData.ingredients.forEach(ingredientItem => {
+                    if (ingredientItem.ingredient.toLowerCase().includes(normalizedSearchTerm)) {
+                        recipeMatchesSearch = true;
                     }
                 });
             }
             
-            if (found) {
-                filteredRecipes.push(recipe);
+            if (recipeMatchesSearch) {
+                currentFilteredRecipes.push(recipeData);
             }
         });
     }
-    handleFiltersChange();
+    handleFiltersChangeEvent();
 }
 
 /**
- * Gère les changements de filtres
+ * Gère les événements de changement des filtres
  */
-export function handleFiltersChange() {
-    const filtered = applyFilters(filteredRecipes);
-    displayRecipes(filtered);
-    updateRecipeCount(filtered.length);
+export function handleFiltersChangeEvent() {
+    const recipesAfterFiltering = filterRecipesBySelectedFilters(currentFilteredRecipes);
+    displayRecipesInContainer(recipesAfterFiltering);
+    updateDisplayedRecipeCount(recipesAfterFiltering.length);
 }
 
 /**
- * Configure tous les événements
+ * Configure tous les écouteurs d'événements de l'application
  */
-export function setupEventListeners() {
-    // Recherche principale
-    const searchInput = document.getElementById('search-input');
-    const searchForm = document.querySelector('.search-form');
-    
-    searchInput.addEventListener('input', (e) => {
-        searchRecipes(e.target.value);
-    });
-    
-    searchForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        searchRecipes(searchInput.value);
-    });
-    
-    // Configuration de la recherche dans les filtres
-    setupFilterSearch();
+export function setupAllEventListeners() {
+    try {
+        // Récupération des éléments de recherche principale
+        const mainSearchInput = document.getElementById('search-input');
+        const mainSearchForm = document.querySelector('.search-form');
+        
+        validateDOMElement(mainSearchInput, 'search-input', 'setupAllEventListeners');
+        validateDOMElement(mainSearchForm, 'search-form', 'setupAllEventListeners');
+        
+        // Écouteur pour la saisie dans le champ de recherche
+        mainSearchInput.addEventListener('input', (inputEvent) => {
+            searchInRecipes(inputEvent.target.value);
+        });
+        
+        // Écouteur pour la soumission du formulaire de recherche
+        mainSearchForm.addEventListener('submit', (submitEvent) => {
+            submitEvent.preventDefault();
+            searchInRecipes(mainSearchInput.value);
+        });
+        
+        // Configuration de la recherche dans les listes déroulantes de filtres
+        setupFilterSearchFunctionality();
+    } catch (error) {
+        displayApplicationError(error, 'setupAllEventListeners');
+    }
 }
