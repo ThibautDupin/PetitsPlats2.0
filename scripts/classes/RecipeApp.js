@@ -78,10 +78,9 @@ export function displayRecipesInContainer(recipesToDisplay) {
         hideErrorMessage();
         
         // Génération du HTML pour toutes les cartes de recettes
-        let allCardsHTML = '';
-        recipesToDisplay.forEach(recipeData => {
-            allCardsHTML += generateCardHTML(recipeData);
-        });
+        const allCardsHTML = recipesToDisplay
+            .map(recipeData => generateCardHTML(recipeData))
+            .join('');
         recipesDisplayContainer.innerHTML = allCardsHTML;
     } catch (error) {
         displayApplicationError(error, 'displayRecipesInContainer');
@@ -105,33 +104,20 @@ export function searchInRecipes(searchTerm) {
         currentFilteredRecipes = allRecipesList;
     } else {
         const normalizedSearchTerm = searchTerm.toLowerCase();
-        currentFilteredRecipes = [];
         
-        allRecipesList.forEach(recipeData => {
-            let recipeMatchesSearch = false;
-            
+        currentFilteredRecipes = allRecipesList.filter(recipeData => {
             // Recherche dans le nom de la recette
-            if (recipeData.name.toLowerCase().includes(normalizedSearchTerm)) {
-                recipeMatchesSearch = true;
-            }
+            const nameMatch = recipeData.name.toLowerCase().includes(normalizedSearchTerm);
             
             // Recherche dans la description de la recette
-            if (!recipeMatchesSearch && recipeData.description.toLowerCase().includes(normalizedSearchTerm)) {
-                recipeMatchesSearch = true;
-            }
+            const descriptionMatch = recipeData.description.toLowerCase().includes(normalizedSearchTerm);
             
             // Recherche dans les ingrédients
-            if (!recipeMatchesSearch) {
-                recipeData.ingredients.forEach(ingredientItem => {
-                    if (ingredientItem.ingredient.toLowerCase().includes(normalizedSearchTerm)) {
-                        recipeMatchesSearch = true;
-                    }
-                });
-            }
+            const ingredientMatch = recipeData.ingredients.some(ingredientItem => 
+                ingredientItem.ingredient.toLowerCase().includes(normalizedSearchTerm)
+            );
             
-            if (recipeMatchesSearch) {
-                currentFilteredRecipes.push(recipeData);
-            }
+            return nameMatch || descriptionMatch || ingredientMatch;
         });
     }
     handleFiltersChangeEvent();

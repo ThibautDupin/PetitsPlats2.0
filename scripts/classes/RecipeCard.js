@@ -6,28 +6,26 @@
  * Formate la liste des ingrédients avec leurs quantités et unités
  */
 export function formatIngredientsListHTML(ingredientsList) {
-    let formattedHTML = '';
-    
-    ingredientsList.forEach(ingredientItem => {
-        const ingredientName = ingredientItem.ingredient;
-        let quantityAndUnit = '';
-        
-        if (ingredientItem.quantity) {
-            quantityAndUnit = ingredientItem.quantity;
-            if (ingredientItem.unit) {
-                quantityAndUnit += ` ${ingredientItem.unit}`;
+    return ingredientsList
+        .map(ingredientItem => {
+            const ingredientName = ingredientItem.ingredient;
+            let quantityAndUnit = '';
+            
+            if (ingredientItem.quantity) {
+                quantityAndUnit = ingredientItem.quantity;
+                if (ingredientItem.unit) {
+                    quantityAndUnit += ` ${ingredientItem.unit}`;
+                }
             }
-        }
 
-        formattedHTML += `
-            <li class="card-description__item">
-                <span class="card-description__item-ingredients">${ingredientName}</span>
-                ${quantityAndUnit ? `<span class="card-description__item-quantity">${quantityAndUnit}</span>` : ''}
-            </li>
-        `;
-    });
-    
-    return formattedHTML;
+            return `
+                <li class="card-description__item">
+                    <span class="card-description__item-ingredients">${ingredientName}</span>
+                    ${quantityAndUnit ? `<span class="card-description__item-quantity">${quantityAndUnit}</span>` : ''}
+                </li>
+            `;
+        })
+        .join('');
 }
 
 /**

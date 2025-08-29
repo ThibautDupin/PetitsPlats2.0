@@ -44,7 +44,7 @@ export function initializeFilterManager(recipesData) {
         };
         
         // Vérification que tous les éléments DOM requis sont présents
-        Object.keys(filterCategories).forEach(categoryName => {
+        Object.keys(filterCategories).map(categoryName => {
             const category = filterCategories[categoryName];
             validateDOMElement(category.dropdownList, `${categoryName}-list`, 'initializeFilterManager');
             validateDOMElement(category.selectedContainer, `selected-${categoryName}`, 'initializeFilterManager');
@@ -74,9 +74,9 @@ export function extractUniqueFilterData() {
 
     recipesList.forEach(recipe => {
         // Extraction des ingrédients uniques
-        recipe.ingredients.forEach(ingredientItem => {
-            uniqueData.ingredients[ingredientItem.ingredient.toLowerCase()] = true;
-        });
+        recipe.ingredients.map(ingredientItem => 
+            uniqueData.ingredients[ingredientItem.ingredient.toLowerCase()] = true
+        );
         
         // Extraction des appareils uniques
         if (recipe.appliance) {
@@ -85,9 +85,9 @@ export function extractUniqueFilterData() {
         
         // Extraction des ustensiles uniques
         if (recipe.ustensils) {
-            recipe.ustensils.forEach(utensilItem => {
-                uniqueData.utensils[utensilItem.toLowerCase()] = true;
-            });
+            recipe.ustensils.map(utensilItem => 
+                uniqueData.utensils[utensilItem.toLowerCase()] = true
+            );
         }
     });
 
@@ -104,7 +104,7 @@ export function extractUniqueFilterData() {
 export function populateAllFilterDropdowns() {
     const uniqueFilterData = extractUniqueFilterData();
     
-    Object.keys(filterCategories).forEach(categoryName => {
+    Object.keys(filterCategories).map(categoryName => {
         fillDropdownWithItems(uniqueFilterData[categoryName], categoryName);
     });
 }
@@ -116,7 +116,7 @@ export function fillDropdownWithItems(itemsList, categoryName) {
     const dropdownContainer = filterCategories[categoryName].dropdownList;
     dropdownContainer.innerHTML = '';
     
-    itemsList.forEach(itemValue => {
+    const listElements = itemsList.map(itemValue => {
         const listItem = document.createElement('li');
         const linkElement = document.createElement('a');
         linkElement.className = 'dropdown-item';
@@ -129,8 +129,10 @@ export function fillDropdownWithItems(itemsList, categoryName) {
         });
         
         listItem.appendChild(linkElement);
-        dropdownContainer.appendChild(listItem);
+        return listItem;
     });
+    
+    listElements.forEach(element => dropdownContainer.appendChild(element));
 }
 
 /**
@@ -177,12 +179,9 @@ export function removeFilterItem(categoryName, itemValue) {
     delete filterCategory.selectedItems[itemValue];
     
     // Supprimer le tag visuel du DOM
-    const existingTags = filterCategory.selectedContainer.querySelectorAll('.selected-option');
-    existingTags.forEach(tagElement => {
-        if (tagElement.textContent.includes(itemValue)) {
-            tagElement.remove();
-        }
-    });
+    Array.from(filterCategory.selectedContainer.querySelectorAll('.selected-option'))
+        .filter(tagElement => tagElement.textContent.includes(itemValue))
+        .forEach(tagElement => tagElement.remove());
     
     notifyFiltersChange();
 }
@@ -191,98 +190,41 @@ export function removeFilterItem(categoryName, itemValue) {
  * Applique tous les filtres actifs sur la liste de recettes fournie
  */
 export function filterRecipesBySelectedFilters(recipesToFilter) {
-    let filteredRecipes = [];
-    
-    recipesToFilter.forEach(recipe => {
-        let shouldIncludeRecipe = true;
-        
+    return recipesToFilter.filter(recipe => {
         // Filtrage par ingrédients (logique ET - tous les ingrédients sélectionnés doivent être présents)
-        if (Object.keys(filterCategories.ingredients.selectedItems).length > 0) {
-            const selectedIngredientsList = Object.keys(filterCategories.ingredients.selectedItems);
-            let allIngredientsFound = true;
-            
-            for (let i = 0; i < selectedIngredientsList.length; i++) {
-                const requiredIngredient = selectedIngredientsList[i];
-                let ingredientFoundInRecipe = false;
-                
-                for (let j = 0; j < recipe.ingredients.length; j++) {
-                    if (recipe.ingredients[j].ingredient.toLowerCase().includes(requiredIngredient)) {
-                        ingredientFoundInRecipe = true;
-                        break;
-                    }
-                }
-                
-                if (!ingredientFoundInRecipe) {
-                    allIngredientsFound = false;
-                    break;
-                }
-            }
-            
-            if (!allIngredientsFound) {
-                shouldIncludeRecipe = false;
-            }
-        }
+        const selectedIngredients = Object.keys(filterCategories.ingredients.selectedItems);
+        const ingredientsMatch = selectedIngredients.length === 0 || 
+            selectedIngredients.every(requiredIngredient => 
+                recipe.ingredients.some(ingredient => 
+                    ingredient.ingredient.toLowerCase().includes(requiredIngredient)
+                )
+            );
         
         // Filtrage par appareils (logique OU - au moins un appareil sélectionné doit correspondre)
-        if (shouldIncludeRecipe && Object.keys(filterCategories.appliances.selectedItems).length > 0) {
-            const selectedAppliancesList = Object.keys(filterCategories.appliances.selectedItems);
-            let applianceFoundInRecipe = false;
-            
-            for (let i = 0; i < selectedAppliancesList.length; i++) {
-                const requiredAppliance = selectedAppliancesList[i];
-                if (recipe.appliance && recipe.appliance.toLowerCase().includes(requiredAppliance)) {
-                    applianceFoundInRecipe = true;
-                    break;
-                }
-            }
-            
-            if (!applianceFoundInRecipe) {
-                shouldIncludeRecipe = false;
-            }
-        }
+        const selectedAppliances = Object.keys(filterCategories.appliances.selectedItems);
+        const appliancesMatch = selectedAppliances.length === 0 || 
+            selectedAppliances.some(requiredAppliance => 
+                recipe.appliance && recipe.appliance.toLowerCase().includes(requiredAppliance)
+            );
         
         // Filtrage par ustensiles (logique ET - tous les ustensiles sélectionnés doivent être présents)
-        if (shouldIncludeRecipe && Object.keys(filterCategories.utensils.selectedItems).length > 0) {
-            const selectedUtensilsList = Object.keys(filterCategories.utensils.selectedItems);
-            let allUtensilsFound = true;
-            
-            for (let i = 0; i < selectedUtensilsList.length; i++) {
-                const requiredUtensil = selectedUtensilsList[i];
-                let utensilFoundInRecipe = false;
-                
-                if (recipe.ustensils) {
-                    for (let j = 0; j < recipe.ustensils.length; j++) {
-                        if (recipe.ustensils[j].toLowerCase().includes(requiredUtensil)) {
-                            utensilFoundInRecipe = true;
-                            break;
-                        }
-                    }
-                }
-                
-                if (!utensilFoundInRecipe) {
-                    allUtensilsFound = false;
-                    break;
-                }
-            }
-            
-            if (!allUtensilsFound) {
-                shouldIncludeRecipe = false;
-            }
-        }
+        const selectedUtensils = Object.keys(filterCategories.utensils.selectedItems);
+        const utensilsMatch = selectedUtensils.length === 0 || 
+            selectedUtensils.every(requiredUtensil => 
+                recipe.ustensils && recipe.ustensils.some(utensil => 
+                    utensil.toLowerCase().includes(requiredUtensil)
+                )
+            );
         
-        if (shouldIncludeRecipe) {
-            filteredRecipes.push(recipe);
-        }
+        return ingredientsMatch && appliancesMatch && utensilsMatch;
     });
-    
-    return filteredRecipes;
 }
 
 /**
  * Configure la fonctionnalité de recherche dans tous les filtres
  */
 export function setupFilterSearchFunctionality() {
-    Object.keys(filterCategories).forEach(categoryName => {
+    Object.keys(filterCategories).map(categoryName => {
         filterCategories[categoryName].searchInput.addEventListener('input', (event) => {
             searchInDropdownItems(event.target.value, filterCategories[categoryName].dropdownList);
         });
