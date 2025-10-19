@@ -28,7 +28,7 @@ let recipeCountDisplay;
 /**
  * Sécurise pour éviter les injections de code
  */
-function cleanSearchInput(input) {
+export function cleanSearchInput(input) {
     if (typeof input !== 'string') {
         return '';
     }
