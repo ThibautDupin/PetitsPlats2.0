@@ -24,6 +24,24 @@ let recipesDisplayContainer;
 let recipeCountDisplay;
 
 /**
+ * Nettoie et sécurise l'entrée utilisateur pour éviter les injections de code
+ */
+export function cleanSearchInput(input) {
+    if (typeof input !== 'string') {
+        return '';
+    }
+    
+    const cleaned = input
+        .replace(/[<>]/g, '') 
+        .replace(/['"]/g, '') 
+        .replace(/javascript:/gi, '')
+        .replace(/on\w+=/gi, '') 
+        .replace(/script/gi, '') 
+        .trim();
+    return cleaned.length > 50 ? cleaned.substring(0, 50) : cleaned;
+}
+
+/**
  * Initialise l'application de gestion des recettes
  */
 export function initializeRecipeApplication(recipesData) {
@@ -100,10 +118,18 @@ export function updateDisplayedRecipeCount(recipeCount) {
  * Effectue une recherche textuelle dans les recettes
  */
 export function searchInRecipes(searchTerm) {
-    if (searchTerm.length < 3) {
+    // Nettoyage sécurisé de l'entrée utilisateur
+    const cleanSearchTerm = cleanSearchInput(searchTerm);
+    
+    // Vérification si l'entrée a été modifiée (tentative d'injection détectée)
+    if (cleanSearchTerm !== searchTerm) {
+        console.warn('Tentative d\'injection détectée et bloquée:', searchTerm);
+    }
+    
+    if (cleanSearchTerm.length < 3) {
         currentFilteredRecipes = allRecipesList;
     } else {
-        const normalizedSearchTerm = searchTerm.toLowerCase();
+        const normalizedSearchTerm = cleanSearchTerm.toLowerCase();
         
         currentFilteredRecipes = allRecipesList.filter(recipeData => {
             // Recherche dans le nom de la recette

@@ -7,6 +7,7 @@ import {
     validateDOMElement,
     handleDataValidationError
 } from './ErrorHandler.js';
+import { cleanSearchInput } from './RecipeApp.js';
 
 // Variables globales pour les filtres
 let recipesList = [];
@@ -235,8 +236,16 @@ export function setupFilterSearchFunctionality() {
  * Filtre les éléments visibles dans une liste déroulante selon le terme de recherche
  */
 export function searchInDropdownItems(searchTerm, dropdownContainer) {
+    // Nettoyage sécurisé de l'entrée utilisateur
+    const cleanSearchTerm = cleanSearchInput(searchTerm);
+    
+    // Vérification si l'entrée a été modifiée (tentative d'injection détectée)
+    if (cleanSearchTerm !== searchTerm) {
+        console.warn('Tentative d\'injection détectée dans la recherche de filtre:', searchTerm);
+    }
+    
     const allItems = dropdownContainer.querySelectorAll('li');
-    const normalizedSearchTerm = searchTerm.toLowerCase();
+    const normalizedSearchTerm = cleanSearchTerm.toLowerCase();
     
     allItems.forEach(listItem => {
         const itemText = listItem.textContent.toLowerCase();
