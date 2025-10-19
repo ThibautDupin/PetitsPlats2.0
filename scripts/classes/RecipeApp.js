@@ -4,7 +4,9 @@ import {
     setOnFiltersChangeCallback, 
     populateAllFilterDropdowns, 
     setupFilterSearchFunctionality, 
-    filterRecipesBySelectedFilters 
+    filterRecipesBySelectedFilters,
+    updateCompatibleFilters,
+    hasActiveFilters
 } from './FilterManager.js';
 import {
     initializeErrorHandler,
@@ -156,6 +158,14 @@ export function handleFiltersChangeEvent() {
     const recipesAfterFiltering = filterRecipesBySelectedFilters(currentFilteredRecipes);
     displayRecipesInContainer(recipesAfterFiltering);
     updateDisplayedRecipeCount(recipesAfterFiltering.length);
+    
+    // Met à jour les filtres compatibles basés sur les recettes filtrées
+    if (hasActiveFilters()) {
+        updateCompatibleFilters(recipesAfterFiltering);
+    } else {
+        // Si aucun filtre n'est actif, affiche tous les filtres disponibles
+        populateAllFilterDropdowns();
+    }
 }
 
 /**

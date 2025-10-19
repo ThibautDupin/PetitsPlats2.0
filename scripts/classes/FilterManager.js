@@ -254,6 +254,78 @@ export function searchInDropdownItems(searchTerm, dropdownContainer) {
 }
 
 /**
+ * Vérifie si des filtres sont actuellement actifs
+ */
+export function hasActiveFilters() {
+    return Object.keys(filterCategories).some(categoryName => 
+        Object.keys(filterCategories[categoryName].selectedItems).length > 0
+    );
+}
+
+/**
+ * Extrait les données de filtres compatibles basées sur les recettes filtrées
+ */
+export function extractCompatibleFilterData(filteredRecipes) {
+    const compatibleData = {
+        ingredients: {},
+        appliances: {},
+        utensils: {}
+    };
+
+    filteredRecipes.forEach(recipe => {
+        // Extraction des ingrédients compatibles
+        recipe.ingredients.forEach(ingredientItem => {
+            const ingredient = ingredientItem.ingredient.toLowerCase();
+            // Ne pas ajouter si l'ingrédient est déjà sélectionné
+            if (!filterCategories.ingredients.selectedItems[ingredient]) {
+                compatibleData.ingredients[ingredient] = true;
+            }
+        });
+        
+        // Extraction des appareils compatibles
+        if (recipe.appliance) {
+            const appliance = recipe.appliance.toLowerCase();
+            // Ne pas ajouter si l'appareil est déjà sélectionné
+            if (!filterCategories.appliances.selectedItems[appliance]) {
+                compatibleData.appliances[appliance] = true;
+            }
+        }
+        
+        // Extraction des ustensiles compatibles
+        if (recipe.ustensils) {
+            recipe.ustensils.forEach(utensilItem => {
+                const utensil = utensilItem.toLowerCase();
+                // Ne pas ajouter si l'ustensile est déjà sélectionné
+                if (!filterCategories.utensils.selectedItems[utensil]) {
+                    compatibleData.utensils[utensil] = true;
+                }
+            });
+        }
+    });
+
+    return {
+        ingredients: Object.keys(compatibleData.ingredients).sort(),
+        appliances: Object.keys(compatibleData.appliances).sort(),
+        utensils: Object.keys(compatibleData.utensils).sort()
+    };
+}
+
+/**
+ * Met à jour les filtres pour n'afficher que ceux compatibles avec les recettes filtrées
+ */
+export function updateCompatibleFilters(filteredRecipes) {
+    try {
+        const compatibleFilterData = extractCompatibleFilterData(filteredRecipes);
+        
+        Object.keys(filterCategories).forEach(categoryName => {
+            fillDropdownWithItems(compatibleFilterData[categoryName], categoryName);
+        });
+    } catch (error) {
+        displayFilterError(error, 'updateCompatibleFilters');
+    }
+}
+
+/**
  * Notifie les autres composants qu'un changement de filtres a eu lieu
  */
 function notifyFiltersChange() {
