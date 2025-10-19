@@ -4,7 +4,9 @@ import {
     setOnFiltersChangeCallback, 
     populateAllFilterDropdowns, 
     setupFilterSearchFunctionality, 
-    filterRecipesBySelectedFilters 
+    filterRecipesBySelectedFilters,
+    updateCompatibleFilters,
+    hasActiveFilters
 } from './FilterManager.js';
 import {
     initializeErrorHandler,
@@ -22,6 +24,24 @@ let allRecipesList = [];
 let currentFilteredRecipes = [];
 let recipesDisplayContainer;
 let recipeCountDisplay;
+
+/**
+ * Sécurise pour éviter les injections de code
+ */
+function cleanSearchInput(input) {
+    if (typeof input !== 'string') {
+        return '';
+    }
+    
+    const cleaned = input
+        .replace(/[<>]/g, '') 
+        .replace(/['"]/g, '') 
+        .replace(/javascript:/gi, '')
+        .replace(/on\w+=/gi, '') 
+        .replace(/script/gi, '') 
+        .trim();
+    return cleaned.length > 50 ? cleaned.substring(0, 50) : cleaned;
+}
 
 /**
  * Initialise l'application de gestion des recettes
@@ -101,10 +121,18 @@ export function updateDisplayedRecipeCount(recipeCount) {
  * Effectue une recherche textuelle dans les recettes
  */
 export function searchInRecipes(searchTerm) {
-    if (searchTerm.length < 3) {
+    // Nettoyage sécurisé de l'entrée utilisateur
+    const cleanSearchTerm = cleanSearchInput(searchTerm);
+    
+    // Vérification si l'entrée a été modifiée (tentative d'injection détectée)
+    if (cleanSearchTerm !== searchTerm) {
+        console.warn('Tentative d\'injection détectée et bloquée:', searchTerm);
+    }
+    
+    if (cleanSearchTerm.length < 3) {
         currentFilteredRecipes = allRecipesList;
     } else {
-        const normalizedSearchTerm = searchTerm.toLowerCase();
+        const normalizedSearchTerm = cleanSearchTerm.toLowerCase();
         currentFilteredRecipes = [];
         
         allRecipesList.forEach(recipeData => {
@@ -144,6 +172,14 @@ export function handleFiltersChangeEvent() {
     const recipesAfterFiltering = filterRecipesBySelectedFilters(currentFilteredRecipes);
     displayRecipesInContainer(recipesAfterFiltering);
     updateDisplayedRecipeCount(recipesAfterFiltering.length);
+    
+    // Met à jour les filtres compatibles basés sur les recettes filtrées
+    if (hasActiveFilters()) {
+        updateCompatibleFilters(recipesAfterFiltering);
+    } else {
+        // Si aucun filtre n'est actif, affiche tous les filtres disponibles
+        populateAllFilterDropdowns();
+    }
 }
 
 /**

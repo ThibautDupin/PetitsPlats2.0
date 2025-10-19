@@ -99,6 +99,42 @@ export function extractUniqueFilterData() {
 }
 
 /**
+ * Extrait les éléments uniques à partir d'une liste spécifique de recettes (pour les filtres compatibles)
+ */
+export function extractCompatibleFilterData(recipesToAnalyze) {
+    const uniqueData = {
+        ingredients: {},
+        appliances: {},
+        utensils: {}
+    };
+
+    recipesToAnalyze.forEach(recipe => {
+        // Extraction des ingrédients uniques
+        recipe.ingredients.forEach(ingredientItem => {
+            uniqueData.ingredients[ingredientItem.ingredient.toLowerCase()] = true;
+        });
+        
+        // Extraction des appareils uniques
+        if (recipe.appliance) {
+            uniqueData.appliances[recipe.appliance.toLowerCase()] = true;
+        }
+        
+        // Extraction des ustensiles uniques
+        if (recipe.ustensils) {
+            recipe.ustensils.forEach(utensilItem => {
+                uniqueData.utensils[utensilItem.toLowerCase()] = true;
+            });
+        }
+    });
+
+    return {
+        ingredients: Object.keys(uniqueData.ingredients).sort(),
+        appliances: Object.keys(uniqueData.appliances).sort(),
+        utensils: Object.keys(uniqueData.utensils).sort()
+    };
+}
+
+/**
  * Remplit toutes les listes déroulantes de filtres
  */
 export function populateAllFilterDropdowns() {
@@ -106,6 +142,23 @@ export function populateAllFilterDropdowns() {
     
     Object.keys(filterCategories).forEach(categoryName => {
         fillDropdownWithItems(uniqueFilterData[categoryName], categoryName);
+    });
+}
+
+/**
+ * Met à jour les listes déroulantes avec seulement les options compatibles
+ * basées sur les recettes actuellement filtrées
+ */
+export function updateCompatibleFilters(filteredRecipes) {
+    const compatibleFilterData = extractCompatibleFilterData(filteredRecipes);
+    
+    Object.keys(filterCategories).forEach(categoryName => {
+        // Exclure les éléments déjà sélectionnés de la liste des options
+        const availableOptions = compatibleFilterData[categoryName].filter(item => 
+            !filterCategories[categoryName].selectedItems[item]
+        );
+        
+        fillDropdownWithItems(availableOptions, categoryName);
     });
 }
 
@@ -185,6 +238,29 @@ export function removeFilterItem(categoryName, itemValue) {
     });
     
     notifyFiltersChange();
+}
+
+/**
+ * Vérifie s'il y a des filtres actifs
+ */
+export function hasActiveFilters() {
+    return Object.keys(filterCategories).some(categoryName => 
+        Object.keys(filterCategories[categoryName].selectedItems).length > 0
+    );
+}
+
+/**
+ * Obtient tous les filtres actuellement sélectionnés
+ */
+export function getActiveFilters() {
+    const activeFilters = {};
+    Object.keys(filterCategories).forEach(categoryName => {
+        const selectedItems = Object.keys(filterCategories[categoryName].selectedItems);
+        if (selectedItems.length > 0) {
+            activeFilters[categoryName] = selectedItems;
+        }
+    });
+    return activeFilters;
 }
 
 /**
