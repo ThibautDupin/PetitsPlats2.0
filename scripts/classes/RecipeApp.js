@@ -174,12 +174,7 @@ export function handleFiltersChangeEvent() {
     updateDisplayedRecipeCount(recipesAfterFiltering.length);
     
     // Met à jour les filtres compatibles basés sur les recettes filtrées
-    if (hasActiveFilters()) {
-        updateCompatibleFilters(recipesAfterFiltering);
-    } else {
-        // Si aucun filtre n'est actif, affiche tous les filtres disponibles
-        populateAllFilterDropdowns();
-    }
+    updateCompatibleFilters(recipesAfterFiltering);
 }
 
 /**
